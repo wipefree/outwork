@@ -1,0 +1,37 @@
+---
+- name: synchronize project file slave1 -> master
+  hosts: web_servers[0]
+  become: yes
+
+  tasks:
+    - name: control of existing hello-1.0.war on slave1-node
+      stat:
+        path: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      register: war
+
+    - name: copy project to master node
+      synchronize:
+        src: '/tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war'
+        dest: '/tmp'
+        mode: pull
+      when: war.stat.exists
+
+- name: synchronize project file master -> slave2
+  hosts: web_servers[1]
+  become: yes
+
+  tasks:
+    - name: control of existing hello-1.0.war in local directory
+      stat:
+        path: /tmp/hello-1.0.war
+      register: war
+      delegate_to: localhost
+
+    - name: copy project file from master to slave2 if file exists
+      synchronize:
+        src: '/tmp/hello-1.0.war'
+        dest: '/var/lib/tomcat9/webapps/'
+        mode: push
+      delegate_to: localhost
+      when: war.stat.exists
+...
