@@ -1,0 +1,22 @@
+---
+- name: creating webserver with tomcat
+  hosts: web_servers[0]
+  become: yes
+
+  tasks:
+    - name: update apt cache
+      apt:
+        update_cache: yes
+
+    - name: install needed software
+      apt:
+        name:
+          - openjdk-11-jdk
+          - tomcat9
+        state: present
+
+    - name: ensure tomcat service is started
+      service:
+        name: tomcat9
+        state: started
+...
