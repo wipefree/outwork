@@ -12,7 +12,6 @@
       apt:
         name:
           - default-jdk
-          - git
           - maven
         state: present
 
