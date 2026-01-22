@@ -16,22 +16,35 @@
         mode: pull
       when: war.stat.exists
 
-- name: synchronize project file master -> slave2
-  hosts: web_servers[1]
-  become: yes
+- name: check file on master
+  hosts: localhost
+  connection: local
+  become: no
 
   tasks:
     - name: control of existing hello-1.0.war in local directory
       stat:
         path: /tmp/hello-1.0.war
       register: war
-      delegate_to: localhost
 
+- name: synchronize project file master -> slave2
+  hosts: web_servers[1]
+  become: yes
+
+  tasks:
     - name: copy project file from master to slave2 if file exists
-      synchronize:
-        src: '/tmp/hello-1.0.war'
-        dest: '/var/lib/tomcat9/webapps/'
-        mode: push
-      delegate_to: localhost
-      when: war.stat.exists
+      copy:
+          src: /tmp/hello-1.0.war
+          dest: /tmp/hello-1.0.war
+          mode: '0644'
+      when: hostvars['localhost'].war.stat.exists
+
+    - name: Move to tomcat webapps directory
+      shell: |
+        mv /tmp/hello-1.0.war /var/lib/tomcat9/webapps/hello-1.0.war
+        chown tomcat:tomcat /var/lib/tomcat9/webapps/hello-1.0.war
+        chmod 644 /var/lib/tomcat9/webapps/hello-1.0.war
+      args:
+        executable: /bin/bash
+      when: hostvars['localhost'].war.stat.exists
 ...
