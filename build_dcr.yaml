@@ -81,4 +81,8 @@
         src: /root/.ssh/key.json
         dest: /tmp/key.json
         mode: '0644'
+      shell: |
+        sudo yc config set service-account-key /tmp/key.json
+        sudo yc container registry configure-docker
+        sudo yc iam create-token | docker login --username iam --password-stdin cr.yandex
 ...
