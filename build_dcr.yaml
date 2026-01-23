@@ -1,0 +1,84 @@
+---
+- name: creating an environment, installing software and build project
+  hosts: web_servers[0]
+  become: yes
+
+  tasks:
+    - name: update apt cache
+      apt:
+        update_cache: yes
+
+    - name: install needed software
+      apt:
+        name:
+          - default-jdk
+          - maven
+          - docker.io
+        state: present
+
+    - name: install YC
+      shell: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | sudo bash -s -- -i /usr/local
+        export PATH=$PATH:/usr/local/bin
+        yc --version
+      args:
+        chdir: /tmp
+
+    - name: control of existing project folder
+      stat:
+        path: /tmp/boxfuse-sample-java-war-hello
+      register: prj
+
+    - name: clone project from Git
+      git:
+        repo: 'https://github.com/boxfuse/boxfuse-sample-java-war-hello.git'
+        dest: /tmp/boxfuse-sample-java-war-hello
+      when: not prj.stat.exists # clone project if project folder not exist
+
+    - name: control of existing hello-1.0.war
+      stat:
+        path: "{{ item }}"
+      loop:
+        - /tmp/boxfuse-sample-java-war-hello/pom.xml
+        - /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      register: war
+
+    - name: display debug info
+      debug:
+        msg:
+          - "pom.xml exists       => {{[ war.results[0].stat.exists ]}}"
+          - "hello-1.0.war exists => {{[ war.results[1].stat.exists ]}}"
+
+    - name: building project WAR
+      command: mvn package -DskipTests
+      args:
+        chdir: /tmp/boxfuse-sample-java-war-hello
+      when: war.results[0].stat.exists and not war.results[1].stat.exists #run build project if hello-1.0.war not exist
+
+    - name: control of result building project as existing file hello-1.0.war
+      stat:
+        path: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      register: war
+
+    - name: if hello-1.0.war is exists, it can be deploy
+      debug:
+        msg:
+          - "*************************"
+          - "hello-1.0.war built is OK"
+          - "*************************"
+      when: war.stat.exists
+
+    - name: if hello-1.0.war is NOT exists, display info about this
+      debug:
+        msg:
+          - "-------------------------------"
+          - "(!) project is not compiled (!)"
+          - "-------------------------------"
+      when: not war.stat.exists
+
+    - name: config docker
+      copy:
+        src: /root/.ssh/key.json
+        dest: /tmp/key.json
+        mode: '0644'
+...
