@@ -14,13 +14,21 @@
           - docker.io
         state: present
 
+    - name: install YC
+      shell: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | sudo bash -s -- -i /usr/local
+        export PATH=$PATH:/usr/local/bin
+        yc --version
+      args:
+        chdir: /tmp
+
     - name: send key for docker ( 1. for reg to registry, 2. for build image )
       copy:
         src: /tmp/ansible_key.json
         dest: /tmp/
         mode: '0644'
 
-    - name: docker registration, build new image, push to registry
+    - name: docker registration and run image from registry
       shell: |
         sudo yc config set service-account-key /tmp/ansible_key.json
         sudo yc container registry configure-docker
