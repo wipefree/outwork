@@ -60,6 +60,14 @@
         path: /tmp/boxfuse-sample-java-war-hello/target/hello-1.0.war
       register: war
 
+    - name: Fail if war file doesn't exist
+      fail:
+        msg:
+          - "-------------------------------"
+          - "(!) project is not compiled (!)"
+          - "-------------------------------"
+      when: not war.stat.exists
+
     - name: if hello-1.0.war is exists, it can be deploy
       debug:
         msg:
@@ -68,21 +76,21 @@
           - "*************************"
       when: war.stat.exists
 
-    - name: if hello-1.0.war is NOT exists, display info about this
-      debug:
-        msg:
-          - "-------------------------------"
-          - "(!) project is not compiled (!)"
-          - "-------------------------------"
-      when: not war.stat.exists
-
-    - name: config docker
+    - name: send key for docker ( 1. for reg to registry, 2. for build image )
       copy:
-        src: /root/.ssh/key.json
-        dest: /tmp/key.json
+        src: "{{ item }}"
+        dest: /tmp/
         mode: '0644'
+      loop:
+        - /tmp/ansible_key.json
+        - /tmp/Dockerfile
+
+    - name: docker registration, build new image, push to registry
       shell: |
-        sudo yc config set service-account-key /tmp/key.json
+        sudo yc config set service-account-key /tmp/ansible_key.json
         sudo yc container registry configure-docker
-        sudo yc iam create-token | docker login --username iam --password-stdin cr.yandex
+        # sudo yc container image list --registry-name andres-repo
+        cd /tmp
+        sudo docker build -f Dockerfile -t cr.yandex/crpirf1t243rd4chrqfd/prod:latest .
+        sudo docker push cr.yandex/crpirf1t243rd4chrqfd/prod:latest
 ...

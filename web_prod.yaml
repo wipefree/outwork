@@ -1,5 +1,5 @@
 ---
-- name: creating webserver with tomcat
+- name: deploy project with tomcat in container
   hosts: web_servers[1]
   become: yes
 
@@ -11,12 +11,18 @@
     - name: install needed software
       apt:
         name:
-          - openjdk-11-jdk
-          - tomcat9
+          - docker.io
         state: present
 
-    - name: ensure tomcat service is started
-      service:
-        name: tomcat9
-        state: started
+    - name: send key for docker ( 1. for reg to registry, 2. for build image )
+      copy:
+        src: /tmp/ansible_key.json
+        dest: /tmp/
+        mode: '0644'
+
+    - name: docker registration, build new image, push to registry
+      shell: |
+        sudo yc config set service-account-key /tmp/ansible_key.json
+        sudo yc container registry configure-docker
+        sudo docker run -d -p 8080:8080 cr.yandex/crpirf1t243rd4chrqfd/prod:latest
 ...
